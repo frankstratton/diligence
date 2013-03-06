@@ -10,6 +10,7 @@ KNOWN_LICENSES = {
     'PSF': 'http://opensource.org/licenses/Python-2.0',
     'LGPL': 'http://opensource.org/licenses/LGPL-3.0',
     'Apache': 'http://opensource.org/licenses/Apache-2.0',
+    'UNKNOWN': '-',
 }
 
 def link_to(license):
@@ -22,7 +23,6 @@ def link_to(license):
         if license.find(k) != -1:
             return v, 0.8
 
-
     return "", 0.0
 
 def get_license(package):
@@ -34,7 +34,8 @@ def get_license(package):
         return None
 
     data = json.loads(resp.content)
-    return data['info']['license']
+    license = data['info']['license']
+    return license.replace("\n","").replace('"', '\\"')
 
 
 def process_file(filename):
@@ -45,19 +46,23 @@ def process_file(filename):
     for line in f:
         package = line.split("==")[0]
         license = get_license(package)
-        if license and license != "UNKNOWN":
+        if license:
             found.append({'package': package, 'license': license})
         else:
             not_found.append(package)
 
+    print "Package,License,Url,Score"
     for item in found:
         url, score = link_to(item['license'])
-        print "{},{},{},{}".format(item['package'], item['license'], url, score)
+        print "{},\"{}\",{},{}".format(item['package'], item['license'], url, score)
 
-    print ""
-    print "Not Found"
-    for item in not_found:
-        print item
+
+    if len(not_found) > 0:
+        print ""
+        print "Packages Not Found"
+        print "------------------"
+        for item in not_found:
+            print item
 
 def main():
     parser = argparse.ArgumentParser(description='Scan requirement files for license information')
@@ -66,7 +71,3 @@ def main():
 
     args = parser.parse_args()
     process_file(args.requirements)
-
-
-
-
